@@ -1,43 +1,62 @@
 import os
 import subprocess
 
+
 def run_python_file(
     working_directory: str, file_path: str, args: list[str] | None = None
 ) -> str:
-      try:
-                  working_dir_abs=os.path.abspath(working_directory)
-                  target_dir:str =os.path.normpath(os.path.join(working_dir_abs, file_path))
-                  valid_target_dir=os.path.commonpath(([working_dir_abs, target_dir])) == working_dir_abs
-                  
-                  
-                  if not valid_target_dir:
-                        print(f'Error: Cannot write to "{file_path}" as it is outside the permitted working directory')
-                        return f'Error: Cannot write to "{file_path}" as it is outside the permitted working directory'
-                  elif not os.path.isfile(target_dir):
-                        print(f'Error: "{file_path}" does not exist or is not a regular file')
-                        return f'Error: "{file_path}" does not exist or is not a regular file'
-                  if str.endswith(".py", file_path):
-                        print(f'Error: "{file_path}" is not a Python file')
-                        return f'Error: "{file_path}" is not a Python file'
-                  if valid_target_dir:
-                        print(f'Success: "{file_path}" is within the working directory')
-                        command = ['python', target_dir]
-                        if args is not None:
-                                command.extend(args)
-                        ComppletedProcess = subprocess.run(command,stdout=True, stderr=True,text=True,timeout=30)    
-                        output_string =""
-                        if ComppletedProcess.stdout == None and ComppletedProcess.stderr==None:
-                              output_string += f"\nNo output produced"
-                        elif not ComppletedProcess.stdout == None :
-                              output_string += f"STDOUT: {ComppletedProcess.stdout}"
-                        elif not ComppletedProcess.stderr==None :
-                              output_string +=f"STDERR: {ComppletedProcess.stderr}"      
-                        output_string+= f"\nProcess exited with code {ComppletedProcess.returncode}"                              
-                        print(output_string)      
-                        return output_string
-      except Exception as e:
-                  
-                  print(f"Error: executing Python file: {e}")
-                  return f"Error: executing Python file: {e}"
-      
-      return ""
+    try:
+        abs_working_dir = os.path.abspath(working_directory)
+        abs_file_path = os.path.normpath(os.path.join(abs_working_dir, file_path))
+        if os.path.commonpath([abs_working_dir, abs_file_path]) != abs_working_dir:
+            return f'Error: Cannot execute "{file_path}" as it is outside the permitted working directory'
+        if not os.path.isfile(abs_file_path):
+            return f'Error: "{file_path}" does not exist or is not a regular file'
+        if not abs_file_path.endswith(".py"):
+            return f'Error: "{file_path}" is not a Python file'
+        command = ["python", abs_file_path]
+        if args:
+            command.extend(args)
+        result = subprocess.run(
+            command,
+            cwd=abs_working_dir,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        output: list[str] = []
+        if result.returncode != 0:
+            output.append(f"Process exited with code {result.returncode}")
+        if not result.stdout and not result.stderr:
+            output.append("No output produced")
+        if result.stdout:
+            output.append(f"STDOUT:\n{result.stdout}")
+        if result.stderr:
+            output.append(f"STDERR:\n{result.stderr}")
+        return "\n".join(output)
+    except Exception as e:
+        return f"Error: executing Python file: {e}"
+
+
+schema_run_python_file = {
+    "type": "function",
+    "function": {
+        "name": "run_python_file",
+        "description": "Executes a specified Python file within the working directory and returns its output",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to the Python file to run, relative to the working directory",
+                },
+                "args": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of arguments to pass to the Python script",
+                },
+            },
+            "required": ["file_path"],
+        },
+    },
+}

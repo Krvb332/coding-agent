@@ -1,7 +1,14 @@
 import os
+import argparse
+import json
+import sys
+
+
 from dotenv import load_dotenv
 from openai import OpenAI
-import argparse
+from prompts import system_prompt
+from call_function import (available_functions,call_function)
+
 
 def main() -> None:
     load_dotenv()
@@ -21,15 +28,23 @@ def main() -> None:
         api_key=api_key,
     )
     message = [
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": args.user_prompt},
     ]
-    
-    generate_content(client, message,args.verbose)
+    MAX_CALLS = 20
 
+    for _ in range(MAX_CALLS):
+        generate_content(client, message,args.verbose)
+        if message=="":
+            sys.exit("1")
+        
 def generate_content(client:OpenAI, messages:list,verbosed:bool) -> None:
     response = client.chat.completions.create(
             model="openrouter/free",
             messages=messages,
+            tools=available_functions,
+            temperature=0,
+            
         )
     
     if not response.usage:
@@ -38,10 +53,29 @@ def generate_content(client:OpenAI, messages:list,verbosed:bool) -> None:
         print(f"User prompt: {messages[0]["content"]}")
         print(f"Prompt tokens: {response.usage.prompt_tokens}")
         print(f"Response tokens: {response.usage.completion_tokens}")
+    message = response.choices[0].message
+    result_message = {}
+    messages_history = []
+    messages_history.append(message)
+    messages_history.append(result_message)
+    if not message.tool_calls:
+        print("Response:")
+        print(message.content)
+        return
+
+    for tool_call in message.tool_calls:
+        if tool_call.type != "function":
+            continue
+
+        function_args = json.loads(tool_call.function.arguments or "{}")
+        result_message = call_function(tool_call)
+        print(call_function(tool_call))
 
 
     print(f"Response: {response.choices[0].message.content}")
-
+    if verbosed:
+        print(f"-> {result_message['content']}")
+    return 
 
 if __name__ == "__main__":
     main()

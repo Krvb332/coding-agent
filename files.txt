@@ -1,0 +1,14 @@
+Success: "." is within the working directory
+Result for '.' directory:
+-lorem.txt: file_size=28 bytes, is_dir=False
+-tests.py: file_size=1434 bytes, is_dir=False
+-main.py: file_size=748 bytes, is_dir=False
+-pkg: file_size=192 bytes, is_dir=True
+Success: "pkg" is within the working directory
+Result for 'pkg' directory:
+-render.py: file_size=403 bytes, is_dir=False
+-__pycache__: file_size=128 bytes, is_dir=True
+-calculator.py: file_size=1956 bytes, is_dir=False
+-morelorem.txt: file_size=26 bytes, is_dir=False
+Error: Cannot list "../" as it is outside the permitted working directory
+Error: Cannot list "/bin" as it is outside the permitted working directory
