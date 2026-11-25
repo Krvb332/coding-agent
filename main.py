@@ -34,9 +34,9 @@ def main() -> None:
     MAX_CALLS = 20
 
     for _ in range(MAX_CALLS):
-        generate_content(client, message,args.verbose)
-        if message=="":
-            sys.exit("1")
+        text = generate_content(client, message,args.verbose)
+        if text:
+            break
         
 def generate_content(client:OpenAI, messages:list,verbosed:bool) -> None:
     response = client.chat.completions.create(
@@ -54,28 +54,26 @@ def generate_content(client:OpenAI, messages:list,verbosed:bool) -> None:
         print(f"Prompt tokens: {response.usage.prompt_tokens}")
         print(f"Response tokens: {response.usage.completion_tokens}")
     message = response.choices[0].message
-    result_message = {}
-    messages_history = []
-    messages_history.append(message)
-    messages_history.append(result_message)
+
+
+
     if not message.tool_calls:
         print("Response:")
         print(message.content)
-        return
+        return message.content
 
+    messages.append(message)
     for tool_call in message.tool_calls:
         if tool_call.type != "function":
             continue
+        result = call_function(tool_call,verbosed)
+        messages.append(result)    
+        print(result["content"])
 
-        function_args = json.loads(tool_call.function.arguments or "{}")
-        result_message = call_function(tool_call)
-        print(call_function(tool_call))
 
-
-    print(f"Response: {response.choices[0].message.content}")
     if verbosed:
-        print(f"-> {result_message['content']}")
-    return 
+        print(f"-> {result['content']}")
+    return
 
 if __name__ == "__main__":
     main()
